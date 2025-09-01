@@ -6,8 +6,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-  "prisma:generate": "prisma generate",
-  "prisma:migrate:dev": "prisma migrate dev --name init",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev --name init",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
@@ -22,7 +22,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
-  "@prisma/client": "6.15.0",
+  "@carhub/db": "workspace:*",
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",

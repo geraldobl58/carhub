@@ -1,20 +1,21 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService as DbPrismaService } from '@carhub/db';
 
 @Injectable()
 export class PrismaService
-  extends PrismaClient
+  extends DbPrismaService
   implements OnModuleInit, OnModuleDestroy
 {
+  // Reuse parent lifecycle if present
   async onModuleInit() {
-    if (typeof this.$connect === 'function') {
-      await (this.$connect as () => Promise<void>)();
+    if (typeof (this as any).$connect === 'function') {
+      await (this as any).$connect();
     }
   }
 
   async onModuleDestroy() {
-    if (typeof this.$disconnect === 'function') {
-      await (this.$disconnect as () => Promise<void>)();
+    if (typeof (this as any).$disconnect === 'function') {
+      await (this as any).$disconnect();
     }
   }
 }
