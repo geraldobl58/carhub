@@ -8,7 +8,7 @@ const serverSchema = z.object({
   PORT: z.coerce.number().default(3000),
 
   // Authentication
-  JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
+  JWT_SECRET: z.string().optional(),
 
   // Environment
   NODE_ENV: z
