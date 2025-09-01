@@ -5,7 +5,7 @@ const serverSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
   // Server
-  PORT: z.coerce.number().default(3333),
+  PORT: z.coerce.number().default(3000),
 
   // Authentication
   JWT_SECRET: z.string().min(1, "JWT_SECRET is required"),
