@@ -17,7 +17,7 @@ async function main() {
         data: {
           email: faker.internet.email().toLowerCase(),
           name: faker.person.fullName(),
-          phone: faker.phone.number("+55 ## #####-####"),
+          phone: faker.phone.number({ style: "international" }),
           password: passwordHash,
           role: "user",
         },
@@ -36,7 +36,7 @@ async function main() {
           description: faker.lorem.sentences({ min: 1, max: 3 }),
           make: faker.vehicle.manufacturer(),
           model: faker.vehicle.model(),
-          year: faker.number.int({ min: 1998, max: 2024 }),
+          year: faker.number.int({ min: 1998, max: 2024 }).toString(),
           km: faker.number.int({ min: 0, max: 250_000 }),
           price: new Prisma.Decimal(
             faker.number.int({ min: 20000, max: 300000 })

@@ -1,54 +1,50 @@
 import {
-  Body,
   Controller,
-  Delete,
   Get,
-  Param,
   Post,
-  Put,
+  Body,
+  Patch,
+  Param,
+  Delete,
   Query,
   ValidationPipe,
   HttpStatus,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import {
-  ApiTags,
-  ApiOkResponse,
   ApiCreatedResponse,
+  ApiOkResponse,
   ApiNotFoundResponse,
   ApiBadRequestResponse,
-  ApiConflictResponse,
   ApiInternalServerErrorResponse,
+  ApiTags,
   ApiOperation,
 } from '@nestjs/swagger';
 
-import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { QueryUserDto } from './dto/query-user.dto';
-import {
-  UserResponse,
-  UsersResponse,
-  ErrorResponse,
-} from './dto/response-user.dto';
+import { ListingService } from './listing.service';
 
-@ApiTags('Users')
-@Controller('users')
-export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+import { CreateListingDto } from './dto/create-listing.dto';
+import { UpdateListingDto } from './dto/update-listing.dto';
+import { QueryListingDto } from './dto/query-listing.dto';
+import {
+  ListingResponse,
+  ListingsResponse,
+  ErrorResponse,
+} from './dto/response-listing.dto';
+
+@ApiTags('Listings')
+@Controller('listings')
+export class ListingController {
+  constructor(private readonly listingService: ListingService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Create a new user' })
+  @ApiOperation({ summary: 'Create a new listing' })
   @ApiCreatedResponse({
-    description: 'User created successfully',
-    type: UserResponse,
+    description: 'Listing created successfully',
+    type: ListingResponse,
   })
   @ApiBadRequestResponse({
     description: 'Invalid input data',
-    type: ErrorResponse,
-  })
-  @ApiConflictResponse({
-    description: 'Email already exists',
     type: ErrorResponse,
   })
   @ApiInternalServerErrorResponse({
@@ -57,16 +53,16 @@ export class UsersController {
   })
   async create(
     @Body(new ValidationPipe({ transform: true, whitelist: true }))
-    dto: CreateUserDto,
+    dto: CreateListingDto,
   ) {
-    return await this.usersService.create(dto);
+    return await this.listingService.create(dto);
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all users with pagination and filters' })
+  @ApiOperation({ summary: 'Get all listings with pagination and filters' })
   @ApiOkResponse({
-    description: 'Users retrieved successfully',
-    type: UsersResponse,
+    description: 'Listings retrieved successfully',
+    type: ListingsResponse,
   })
   @ApiInternalServerErrorResponse({
     description: 'Internal server error',
@@ -74,23 +70,23 @@ export class UsersController {
   })
   async findAll(
     @Query(new ValidationPipe({ transform: true, whitelist: true }))
-    query: QueryUserDto,
+    query: QueryListingDto,
   ): Promise<any> {
-    return await this.usersService.findAll(query);
+    return await this.listingService.findAll(query);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a user by ID' })
+  @ApiOperation({ summary: 'Get a listing by ID' })
   @ApiOkResponse({
-    description: 'User retrieved successfully',
-    type: UserResponse,
+    description: 'Listing retrieved successfully',
+    type: ListingResponse,
   })
   @ApiNotFoundResponse({
-    description: 'User not found',
+    description: 'Listing not found',
     type: ErrorResponse,
   })
   @ApiBadRequestResponse({
-    description: 'Invalid user ID',
+    description: 'Invalid listing ID',
     type: ErrorResponse,
   })
   @ApiInternalServerErrorResponse({
@@ -107,25 +103,21 @@ export class UsersController {
     )
     id: string,
   ) {
-    return await this.usersService.findOne(id);
+    return await this.listingService.findOne(id);
   }
 
-  @Put(':id')
-  @ApiOperation({ summary: 'Update a user by ID' })
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a listing by ID' })
   @ApiOkResponse({
-    description: 'User updated successfully',
-    type: UserResponse,
+    description: 'Listing updated successfully',
+    type: ListingResponse,
   })
   @ApiNotFoundResponse({
-    description: 'User not found',
+    description: 'Listing not found',
     type: ErrorResponse,
   })
   @ApiBadRequestResponse({
-    description: 'Invalid input data or user ID',
-    type: ErrorResponse,
-  })
-  @ApiConflictResponse({
-    description: 'Email already exists',
+    description: 'Invalid input data or listing ID',
     type: ErrorResponse,
   })
   @ApiInternalServerErrorResponse({
@@ -142,27 +134,23 @@ export class UsersController {
     )
     id: string,
     @Body(new ValidationPipe({ transform: true, whitelist: true }))
-    dto: UpdateUserDto,
+    dto: UpdateListingDto,
   ) {
-    return await this.usersService.update(id, dto);
+    return await this.listingService.update(id, dto);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a user by ID' })
+  @ApiOperation({ summary: 'Delete a listing by ID' })
   @ApiOkResponse({
-    description: 'User deleted successfully',
-    type: UserResponse,
+    description: 'Listing deleted successfully',
+    type: ListingResponse,
   })
   @ApiNotFoundResponse({
-    description: 'User not found',
+    description: 'Listing not found',
     type: ErrorResponse,
   })
   @ApiBadRequestResponse({
-    description: 'Invalid user ID',
-    type: ErrorResponse,
-  })
-  @ApiConflictResponse({
-    description: 'Cannot delete user with existing listings',
+    description: 'Invalid listing ID',
     type: ErrorResponse,
   })
   @ApiInternalServerErrorResponse({
@@ -179,6 +167,6 @@ export class UsersController {
     )
     id: string,
   ) {
-    return await this.usersService.remove(id);
+    return await this.listingService.remove(id);
   }
 }
