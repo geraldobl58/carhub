@@ -1,32 +1,35 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@carhub/db';
-
-export type User = {
-  id: number;
-  email: string;
-  name?: string;
-};
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { prisma, Prisma } from '@carhub/db';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
-
-  async findAll(): Promise<User[]> {
-    const users = await this.prisma.user.findMany();
-    return users.map((u) => ({
-      id: u.id,
-      email: u.email ?? '',
-      name: u.name ?? undefined,
-    }));
+  async create(data: Prisma.UserCreateInput) {
+    return prisma.user.create({ data });
   }
 
-  async findOne(id: number): Promise<User | null> {
-    const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) return null;
-    return {
-      id: user.id,
-      email: user.email ?? '',
-      name: user.name ?? undefined,
-    };
+  async findAll() {
+    return prisma.user.findMany();
+  }
+
+  async findOne(id: number) {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  async update(id: number, data: Prisma.UserUpdateInput) {
+    try {
+      return await prisma.user.update({ where: { id }, data });
+    } catch (error) {
+      throw new NotFoundException('User not found');
+    }
+  }
+
+  async remove(id: number) {
+    try {
+      return await prisma.user.delete({ where: { id } });
+    } catch (error) {
+      throw new NotFoundException('User not found');
+    }
   }
 }
