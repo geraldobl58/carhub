@@ -15,7 +15,8 @@
     "prisma:generate": "dotenv -e ../../.env -- prisma generate --schema=src/prisma/schema.prisma",
     "prisma:migrate": "dotenv -e ../../.env -- prisma migrate dev --schema=src/prisma/schema.prisma",
     "prisma:deploy": "dotenv -e ../../.env -- prisma migrate deploy --schema=src/prisma/schema.prisma",
-    "prisma:studio": "dotenv -e ../../.env -- prisma studio --schema=src/prisma/schema.prisma"
+    "prisma:studio": "dotenv -e ../../.env -- prisma studio --schema=src/prisma/schema.prisma",
+    "prisma:reset": "dotenv -e ../../.env -- prisma migrate reset --schema=src/prisma/schema.prisma"
   },
   "dependencies": {
     "@carhub/env": "workspace:*",
