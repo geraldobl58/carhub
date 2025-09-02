@@ -7,332 +7,42 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ----------------------
-// ENUNS (padronização)
-// ----------------------
-enum PaymentProvider {
-  stripe
-  pagarme
-  mercadopago
-}
-
-enum SubscriptionStatus {
-  trialing
-  active
-  past_due
-  canceled
-  unpaid
-  incomplete
-  incomplete_expired
-  paused
-}
-
-enum PaymentStatus {
-  requires_payment_method
-  requires_confirmation
-  requires_action
-  processing
-  succeeded
-  canceled
-  failed
-  refunded
-  partially_refunded
-}
-
-enum CheckoutMode {
-  payment // compra única (ex.: anúncio PF)
-  subscription // assinatura (loja)
-}
-
-// ----------------------
-// ENTIDADES BASE (originais, com ajustes)
-// ----------------------
-model Tenant {
-  id               String        @id @default(cuid())
-  slug             String        @unique
-  name             String
-  cnpj             String?       @unique
-  users            UserTenant[]
-  listings         Listing[]
-  subscription     Subscription?
-  // Stripe: cliente para cobrar assinatura da loja
-  stripeCustomerId String?       @unique
-
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  Invoice         Invoice[]
-  CheckoutSession CheckoutSession[]
-}
-
 model User {
-  id               String       @id @default(cuid())
-  email            String       @unique
-  phone            String?
-  name             String
-  password         String
-  roles            UserTenant[]
-  leads            Lead[]       @relation("LeadBuyer")
-  messages         Message[]
-  favorites        Favorite[]
-  // Stripe: cliente para cobranças avulsas (PF compra de anúncio/impulsionamento)
-  stripeCustomerId String?      @unique
+  id       String  @id @default(uuid())
+  email    String  @unique
+  password String
+  name     String
+  phone    String?
+  role     String  @default("user") // admin | seller | buyer
 
-  createdAt       DateTime          @default(now())
-  Listing         Listing[]
-  Invoice         Invoice[]
-  CheckoutSession CheckoutSession[]
+  listings Listing[] // anúncios criados pelo usuário
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-// Mantido igual
-model UserTenant {
-  id       String @id @default(cuid())
-  userId   String
-  tenantId String
-  role     String // owner|admin|seller
-  user     User   @relation(fields: [userId], references: [id])
-  tenant   Tenant @relation(fields: [tenantId], references: [id])
-
-  @@unique([userId, tenantId])
-}
-
-// Mantido igual
 model Listing {
-  id              String            @id @default(cuid())
-  tenantId        String? // null = pessoa física
-  sellerUserId    String? // PF
-  title           String
-  make            String
-  model           String
-  version         String?
-  year            Int
-  km              Int
-  fuel            String
-  gearbox         String
-  color           String?
-  price           Decimal           @db.Decimal(12, 2)
-  fipeCode        String?
-  city            String
-  state           String
-  lat             Decimal?          @db.Decimal(9, 6)
-  lng             Decimal?          @db.Decimal(9, 6)
-  status          String // draft|review|active|paused|sold|blocked
-  medias          Media[]
-  priceHistory    PriceHistory[]
-  leads           Lead[]            @relation("ListingLeads")
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  tenant          Tenant?           @relation(fields: [tenantId], references: [id])
-  sellerUser      User?             @relation(fields: [sellerUserId], references: [id])
-  CheckoutSession CheckoutSession[]
-}
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+  make        String
+  model       String
+  year        Int
+  km          Int
+  price       Decimal @db.Decimal(12, 2)
+  fuel        String?
+  gearbox     String?
+  color       String?
+  city        String?
+  state       String?
 
-model Media {
-  id        String  @id @default(cuid())
-  listingId String
-  url       String
-  width     Int?
-  height    Int?
-  order     Int     @default(0)
-  listing   Listing @relation(fields: [listingId], references: [id])
-}
+  images String[] // array de URLs
 
-model PriceHistory {
-  id        String   @id @default(cuid())
-  listingId String
-  price     Decimal  @db.Decimal(12, 2)
-  createdAt DateTime @default(now())
-  listing   Listing  @relation(fields: [listingId], references: [id])
-}
+  status String @default("draft") // draft | active | sold
 
-model Lead {
-  id        String   @id @default(cuid())
-  listingId String
-  buyerId   String
-  name      String
-  email     String?
-  phone     String?
-  message   String?
-  channel   String // web|whatsapp
-  createdAt DateTime @default(now())
-  listing   Listing  @relation("ListingLeads", fields: [listingId], references: [id])
-  buyer     User     @relation("LeadBuyer", fields: [buyerId], references: [id])
-}
-
-// Planos agora mapeiam Product/Price do Stripe
-model Plan {
-  id         String  @id @default(cuid())
-  code       String  @unique // PF_BASIC, STORE_GOLD...
-  name       String
-  priceCents Int
-  period     String? // monthly|once
-  slots      Int?
-  boosts     Int?
-  features   Json
-  active     Boolean @default(true)
-
-  // Stripe mapping
-  provider        PaymentProvider   @default(stripe)
-  stripeProductId String?           @unique
-  stripePriceId   String?           @unique
-  Subscription    Subscription[]
-  CheckoutSession CheckoutSession[]
-}
-
-// ----------------------
-// PAGAMENTOS & ASSINATURAS (Stripe)
-// ----------------------
-
-// Assinatura por Tenant (loja) — 1:1 com Plan
-model Subscription {
-  id               String             @id @default(cuid())
-  tenantId         String             @unique
-  planId           String
-  provider         PaymentProvider    @default(stripe)
-  status           SubscriptionStatus
-  currentPeriodEnd DateTime
-
-  // Stripe mapping
-  stripeSubscriptionId String? @unique
-  latestInvoiceId      String? // referência ao último invoice (opcional)
-  cancelAtPeriodEnd    Boolean @default(false)
-
-  tenant   Tenant    @relation(fields: [tenantId], references: [id])
-  plan     Plan      @relation(fields: [planId], references: [id])
-  invoices Invoice[]
-}
-
-// Invoice (Stripe Invoice) — pode existir para assinatura ou compra avulsa
-model Invoice {
-  id               String          @id @default(cuid())
-  // Escopo: ou é de Tenant (assinatura loja) ou de User (compra PF) — um dos dois
-  tenantId         String?
-  userId           String?
-  provider         PaymentProvider @default(stripe)
-  status           PaymentStatus
-  currency         String          @default("BRL")
-  amountTotal      Int // em centavos
-  amountPaid       Int             @default(0)
-  amountDue        Int
-  hostedInvoiceUrl String?
-  pdfUrl           String?
-
-  // Stripe mapping
-  stripeInvoiceId String? @unique
-
-  subscriptionId String? // se originado de assinatura
-  subscription   Subscription? @relation(fields: [subscriptionId], references: [id])
-
-  // Relacionamentos
-  tenant   Tenant?   @relation(fields: [tenantId], references: [id])
-  user     User?     @relation(fields: [userId], references: [id])
-  payments Payment[]
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@index([tenantId])
-  @@index([userId])
-}
-
-// Payment (Stripe PaymentIntent/Charge)
-model Payment {
-  id        String          @id @default(cuid())
-  invoiceId String?
-  provider  PaymentProvider @default(stripe)
-  status    PaymentStatus
-  currency  String          @default("BRL")
-  amount    Int // em centavos
-
-  // Stripe mapping
-  stripePaymentIntentId String? @unique
-  stripeChargeId        String? @unique
-  stripeRefundId        String? @unique
-
-  rawPayload Json? // snapshot do webhook de confirmação/refund
-
-  invoice Invoice? @relation(fields: [invoiceId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([invoiceId])
-}
-
-// Sessão de Checkout do Stripe (para assinatura ou pagamento único)
-model CheckoutSession {
-  id       String          @id @default(cuid())
-  // Escopo: PF (User) ou Loja (Tenant)
-  tenantId String?
-  userId   String?
-  mode     CheckoutMode
-  provider PaymentProvider @default(stripe)
-  status   String? // open|complete|expired
-
-  // Stripe mapping
-  stripeSessionId String    @unique
-  url             String?
-  expiresAt       DateTime?
-
-  // Contexto do que está sendo comprado/assinado
-  planId    String? // assinatura de plano
-  listingId String? // compra de anúncio/impulsionamento para PF
-  metadata  Json?
-
-  tenant  Tenant?  @relation(fields: [tenantId], references: [id])
-  user    User?    @relation(fields: [userId], references: [id])
-  plan    Plan?    @relation(fields: [planId], references: [id])
-  listing Listing? @relation(fields: [listingId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([tenantId])
-  @@index([userId])
-  @@index([planId])
-  @@index([listingId])
-}
-
-// WebhookEvent para idempotência/observabilidade de webhooks Stripe
-model WebhookEvent {
-  id                     String          @id @default(cuid())
-  provider               PaymentProvider @default(stripe)
-  // Stripe mapping
-  stripeEventId          String          @unique
-  type                   String
-  receivedAt             DateTime        @default(now())
-  payload                Json
-  processed              Boolean         @default(false)
-  processedAt            DateTime?
-  // chaves auxiliares para consultas rápidas
-  relatedInvoiceId       String?
-  relatedPaymentIntentId String?
-  relatedSubscriptionId  String?
-
-  @@index([type])
-  @@index([relatedInvoiceId])
-  @@index([relatedPaymentIntentId])
-  @@index([relatedSubscriptionId])
-}
-
-// ----------------------
-// FAVORITOS (mantido)
-// ----------------------
-model Favorite {
-  id        String   @id @default(cuid())
-  userId    String
-  listingId String
-  createdAt DateTime @default(now())
-  User      User     @relation(fields: [userId], references: [id])
-
-  @@unique([userId, listingId])
-}
-
-model Message {
-  id        String   @id @default(cuid())
-  userId    String
-  content   String
-  createdAt DateTime @default(now())
-  User      User     @relation(fields: [userId], references: [id])
-
-  @@index([userId])
 }
